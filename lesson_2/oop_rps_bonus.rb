@@ -1,7 +1,7 @@
 class Move
   attr_reader :value, :player_history, :computer_history
   VALUES = ['rock', 'paper', 'scissors', 'lizard', 'spock'].freeze
-  R2_Values = ['rock'].freeze
+  R2_VALUES = ['rock'].freeze
   Hal_VALUES = ['scissors', 'scissors', 'scissors', 'scissors', 'rock'].freeze
   Chappie_VALUES = ['lizard', 'spock'].freeze
   Sonnie_VALUES = ['paper', 'paper', 'paper', 'paper', 'lizard', 'lizard',
@@ -15,7 +15,7 @@ class Move
     'lizard' => %w(spock paper)
   }.freeze
 
-  LOOSE_SCENARIO = {
+  LOSE_SCENARIO = {
     'rock'     => %w(paper spock),
     'paper'    => %w(scissors lizard),
     'scissors' => %w(rock spock),
@@ -32,7 +32,7 @@ class Move
   end
 
   def <(other_move)
-    LOOSE_SCENARIO[value].include?(other_move.value)
+    LOSE_SCENARIO[value].include?(other_move.value)
   end
 
   def to_s
@@ -76,8 +76,8 @@ class Human < Player
     loop do
       puts "What's your name?"
       n = gets.chomp
-      break unless n.empty?
-      puts "Sorry, must enter a value"
+      break unless (n =~ /[A-Za-z]/).nil?
+      puts "Sorry, must enter a valid name"
     end
     self.name = n
   end
@@ -135,17 +135,7 @@ class Computer < Player
   end
 end
 
-class RPSGame
-  attr_accessor :human, :computer, :human_score, :computer_score, :history
-
-  def initialize
-    @human = Human.new
-    @computer = Computer.new
-    @history = History.new
-    @human_score = 0
-    @computer_score = 0
-  end
-
+module Displayable
   def display_welcome_message
     puts "Welcome to Rock, Paper, Scissors!"
   end
@@ -173,6 +163,19 @@ class RPSGame
     puts "#{human.name} score: #{human_score}"
     puts "#{computer.name} score: #{computer_score}"
   end
+end
+
+class RPSGame
+  attr_accessor :human, :computer, :human_score, :computer_score, :history
+  include Displayable
+
+  def initialize
+    @human = Human.new
+    @computer = Computer.new
+    @history = History.new
+    @human_score = 0
+    @computer_score = 0
+  end
 
   def update_history
     history.update(human.move, computer.move)
@@ -192,11 +195,11 @@ class RPSGame
     loop do
       puts "Would you like to play again? (y/n)"
       answer = gets.chomp
-      break if ['y', 'n'].include?(answer)
+      break if ['y', 'n'].include?(answer.downcase)
       puts "Sorry, must be y or n."
     end
-    return false if answer == 'n'
-    return true if answer == 'y'
+    return false if answer.casecmp('n').zero?
+    return true if answer.casecmp('y').zero?
   end
 
   def reset
