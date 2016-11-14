@@ -181,10 +181,6 @@ class RPSGame
     history.update(human.move, computer.move)
   end
 
-  def display_history
-    history.display
-  end
-
   def update_score
     self.human_score += 1 if human.move > computer.move
     self.computer_score += 1 if human.move < computer.move
@@ -225,7 +221,7 @@ class RPSGame
         display_winner
         display_score
       end
-      display_history
+      history.display
       break unless play_again?
     end
   end
