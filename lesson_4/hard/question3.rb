@@ -48,11 +48,6 @@ class Seacraft
     self.fuel_efficiency = fuel_efficiency
     self.fuel_capacity = fuel_capacity
   end
-
-  def range
-    range_from_moveable = super
-    return range_from_moveable + 10
-  end
 end
 
 
