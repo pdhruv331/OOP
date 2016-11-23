@@ -50,11 +50,27 @@ class Board
     nil
   end
 
+  def find_risk_square(marker)
+    WINNING_LINES.each do |line|
+      if two_identical_markers?(marker, line)
+        return line.select { |element| @squares[element].unmarked? }.first
+      end
+    end
+    nil
+  end
+
   def reset
     (1..9).each { |key| @squares[key] = Square.new }
   end
 
   private
+
+  def two_identical_markers?(marker, line)
+    marked_squares = @squares.values_at(*line).collect(&:marker).count(marker)
+    unmarked_squares = @squares.values_at(*line).select(&:unmarked?).size
+    return true if marked_squares == 2 && unmarked_squares == 1
+    false
+  end
 
   def three_identical_markers?(squares)
     markers = squares.select(&:marked?).collect(&:marker)
@@ -84,8 +100,15 @@ class Square
 end
 
 class Player
-  attr_accessor :marker, :name
+  attr_accessor :marker, :name, :score
+  def initialize
+    set_name
+    set_marker
+    @score = 0
+  end
+end
 
+class Human < Player
   def set_name
     n = ""
     loop do
@@ -94,7 +117,7 @@ class Player
       break unless (n =~ /[A-Za-z]/).nil?
       puts "Sorry, must enter a valid name"
     end
-    @name = n
+    self.name = n
   end
 
   def set_marker
@@ -105,27 +128,75 @@ class Player
       break if %(x o).include?(answer)
       puts "Thats not a valid choice."
     end
-    @marker = answer.upcase
+    self.marker = answer.upcase
+    @@marker = answer.upcase
+  end
+
+  def self.marker
+    @@marker
+  end
+
+  def moves(board)
+    square = nil
+    puts "Choose a square (#{joinor(board.unmarked_keys)})  "
+    loop do
+      square = gets.chomp.to_i
+      break if board.unmarked_keys.include?(square)
+      puts "Sorry thats not a valid choice"
+    end
+    board[square] = marker
+  end
+
+  def joinor(arr, char1 = ', ', char = "or")
+    if arr.size > 1
+      last_element = arr.pop
+      arr.insert(arr.length, "#{char} #{last_element}").join(char1)
+    else
+      arr.join
+    end
+  end
+end
+
+class Computer < Player
+  attr_accessor :Human
+  def set_name
+    self.name = %w(Jarvis Cortana Siri Vision).sample
+  end
+
+  def set_marker
+    self.marker = if Human.marker == 'X'
+                    'O'
+                  else
+                    'X'
+                  end
+  end
+
+  def moves(board, human_marker)
+    square = offense(board) # offense first
+    square = defense(board, human_marker) unless square
+    square = 5 if !square && board.unmarked_keys.include?(5)
+    square = board.unmarked_keys.sample unless square
+    board[square] = marker
+  end
+
+  def offense(board)
+    board.find_risk_square(marker)
+  end
+
+  def defense(board, human_marker)
+    board.find_risk_square(human_marker)
   end
 end
 
 class TTTGame
   FIRST_TO_MOVE = 'X'.freeze
   attr_reader :board, :human, :computer
-  attr_accessor :human_score, :computer_score
 
   def initialize
     @board = Board.new
-    @human = Player.new
-    @computer = Player.new
+    @human = Human.new
+    @computer = Computer.new
     @current_marker = FIRST_TO_MOVE
-    @human_score = 0
-    @computer_score = 0
-  end
-
-  def set_names
-    human.set_name
-    computer.name = %w(Jarvis Cortana Siri Vision).sample
   end
 
   def core_gameplay
@@ -143,16 +214,15 @@ class TTTGame
   end
 
   def gameplay
-    set_names
-    set_markers
     loop do
       loop do
         board.reset
+        @current_marker = FIRST_TO_MOVE
         display_board
         core_gameplay
         update_score
         display_result
-        break if human_score == 5 || computer_score == 5
+        break if human.score == 5 || computer.score == 5
       end
       break unless play_again?
       reset
@@ -167,15 +237,6 @@ class TTTGame
 
   private
 
-  def set_markers
-    human.set_marker
-    computer.marker = if human.marker == 'X'
-                        'O'
-                      else
-                        'X'
-                      end
-  end
-
   def continue_game?
     loop do
       puts "Press Enter to start next round"
@@ -189,13 +250,13 @@ class TTTGame
   end
 
   def update_score
-    self.human_score += 1 if board.winning_marker == human.marker
-    self.computer_score += 1 if board.winning_marker == computer.marker
+    human.score += 1 if board.winning_marker == human.marker
+    computer.score += 1 if board.winning_marker == computer.marker
   end
 
   def display_score
-    puts "#{human.name} score: #{human_score}"
-    puts "#{computer.name} score: #{computer_score}"
+    puts "#{human.name} score: #{human.score}"
+    puts "#{computer.name} score: #{computer.score}"
   end
 
   def display_welcome_message
@@ -221,30 +282,6 @@ class TTTGame
     puts ""
     board.draw
     puts ""
-  end
-
-  def joinor(arr, char1 = ', ', char = "or")
-    if arr.size > 1
-      last_element = arr.pop
-      arr.insert(arr.length, "#{char} #{last_element}").join(char1)
-    else
-      arr.join
-    end
-  end
-
-  def human_moves
-    square = nil
-    puts "Choose a square (#{joinor(board.unmarked_keys)})  "
-    loop do
-      square = gets.chomp.to_i
-      break if board.unmarked_keys.include?(square)
-      puts "Sorry thats not a valid choice"
-    end
-    board[square] = human.marker
-  end
-
-  def computer_moves
-    board[board.unmarked_keys.sample] = computer.marker
   end
 
   def display_result
@@ -277,8 +314,8 @@ class TTTGame
     clear
     puts "Lets play again!"
     puts ""
-    self.human_score = 0
-    self.computer_score = 0
+    human.score = 0
+    computer.score = 0
   end
 
   def human_turn?
@@ -287,10 +324,10 @@ class TTTGame
 
   def current_player_moves
     if human_turn?
-      human_moves
+      human.moves(board)
       @current_marker = computer.marker
     else
-      computer_moves
+      computer.moves(board, human.marker)
       @current_marker = human.marker
     end
   end
