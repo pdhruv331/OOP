@@ -38,10 +38,6 @@ class Player < Participant
     end
   end
 
-  def bust?
-    total > 21
-  end
-
   def calculate_total
     @total = 0
     hand.each do |cards|
@@ -75,6 +71,11 @@ class Player < Participant
       break
     end
   end
+
+  def bust?
+    total > 21
+  end
+
 end
 
 class Dealer < Participant
@@ -171,7 +172,7 @@ class Deck
     'Jack' => 10,
     'Queen' => 10,
     'King'  => 10
-  }.freezes
+  }.freeze
 end
 
 class Game
@@ -239,8 +240,8 @@ class Game
   def core_gameplay
     loop do
       dealer.deal(human.hand, dealer.hand)
-      human.turn(dealer.hand)
       show_cards
+      human.turn(dealer.hand)
       break if human.bust?
       clear_screen_and_display
       dealer.turn(human.hand)
