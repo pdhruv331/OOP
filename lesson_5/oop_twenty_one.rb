@@ -1,41 +1,7 @@
-module Ace
+
+module Hand
   def value_of_ace(current_total)
     current_total > 10 ? 1 : 11
-  end
-end
-
-class Participant
-  attr_accessor :hand, :total
-  def initialize
-    @hand = []
-  end
-end
-
-class Player < Participant
-  include Ace
-
-  def turn(other_hand)
-    answer = nil
-    loop do
-      break if answer == 'stay' || bust?
-      puts "hit or stay?"
-      answer = gets.chomp
-      if !(answer == 'hit' || answer == 'stay')
-        puts "Enter a valid response"
-        next
-      end
-      hit(other_hand) if answer == 'hit'
-      information
-    end
-    not_hit
-  end
-
-  def not_hit
-    if bust?
-      puts "You busted. Dealer Wins!!!!!"
-    else
-      puts "You stayed"
-    end
   end
 
   def calculate_total
@@ -48,16 +14,6 @@ class Player < Participant
                 end
     end
     total
-  end
-
-  def information
-    string = ""
-    hand.each do |card|
-      string += card[0] + " "
-    end
-    calculate_total
-    puts "Player has #{string.split.join(' and ')}"
-    puts "Your total is #{total}"
   end
 
   def hit(other_hand)
@@ -76,10 +32,63 @@ class Player < Participant
     total > 21
   end
 
+  def not_hit
+    if bust?
+      puts "#{name} busted. #{name} loses"
+    else
+      puts "#{name} stayed"
+    end
+  end
+
+  def information
+    string = ""
+    hand.each do |card|
+      string += card[0] + " "
+    end
+    calculate_total
+    puts "#{name} has #{string.split.join(' and ')}"
+    puts "#{name}'s total is #{total}"
+  end
+end
+
+class Participant
+  attr_accessor :hand, :total, :name
+  def initialize
+    @hand = []
+    set_name
+  end
+end
+
+class Player < Participant
+  include Hand
+
+  def set_name
+    @name = 'Player'
+  end
+
+  def turn(other_hand)
+    answer = nil
+    loop do
+      break if answer == 'stay' || bust?
+      puts "hit or stay?"
+      answer = gets.chomp
+      if !(answer == 'hit' || answer == 'stay')
+        puts "Enter a valid response"
+        next
+      end
+      hit(other_hand) if answer == 'hit'
+      information
+    end
+    not_hit
+  end
 end
 
 class Dealer < Participant
-  include Ace
+  include Hand
+
+  def set_name
+    @name = 'Dealer'
+  end
 
   def deal(player_hand, dealer_hand)
     2.times do |card|
@@ -110,18 +119,6 @@ class Dealer < Participant
     puts "Dealer total is #{total}"
   end
 
-  def calculate_total
-    @total = 0
-    hand.each do |cards|
-      @total += if cards[0] == 'Ace'
-                  value_of_ace(total)
-                else
-                  Deck::VALUES[cards[0]]
-                end
-    end
-    total
-  end
-
   def turn(other_hand)
     until total >= 17
       puts "Dealer hits"
@@ -130,33 +127,10 @@ class Dealer < Participant
     end
     not_hit
   end
-
-  def hit(other_hand)
-    card = []
-    loop do
-      card = [Deck::RANK.sample, Deck::SUITS.sample]
-      while hand.include?(card) || other_hand.include?(card)
-        card = [Deck::RANK.sample, Deck::SUITS.sample]
-      end
-      hand << card
-      break
-    end
-  end
-
-  def not_hit
-    if bust?
-      puts "Dealer busted. You Win!!!"
-    else
-      puts "Dealer stayed"
-    end
-  end
-
-  def bust?
-    total > 21
-  end
 end
 
 class Deck
+  attr_reader
   SUITS = %w(hearts diamonds clubs spades).freeze
   RANK = %w(2 3 4 5 6 7 8 9 10 Jack Queen King Ace).freeze
   VALUES = {
